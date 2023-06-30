@@ -83,7 +83,7 @@ class ModelConfig(BaseModel):
             return
 
         model_id = self.path[7:]
-        self.path = f"/config/model_cache/{model_id}"
+        self.path = f"/media/model_cache/{model_id}"
         model_info_path = f"{self.path}.json"
 
         # download the model if it doesn't exist

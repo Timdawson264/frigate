@@ -168,11 +168,16 @@ class FrigateApp:
         self.timeline_queue: Queue = mp.Queue()
 
     def init_database(self) -> None:
+        VACUME_PATH = f"{CONFIG_DIR}/.vacuum"
+        if os.path.isfile(self.config.database.path):
+            db_folder = os.path.dirname(self.config.database.path)
+            VACUME_PATH = f"{db_folder}/.vacuum"
+
         def vacuum_db(db: SqliteExtDatabase) -> None:
             db.execute_sql("VACUUM;")
 
             try:
-                with open(f"{CONFIG_DIR}/.vacuum", "w") as f:
+                with open(VACUME_PATH, "w") as f:
                     f.write(str(datetime.datetime.now().timestamp()))
             except PermissionError:
                 logger.error("Unable to write to /config to save DB state")
@@ -193,8 +198,8 @@ class FrigateApp:
         router.run()
 
         # check if vacuum needs to be run
-        if os.path.exists(f"{CONFIG_DIR}/.vacuum"):
-            with open(f"{CONFIG_DIR}/.vacuum") as f:
+        if os.path.exists(VACUME_PATH):
+            with open(VACUME_PATH) as f:
                 try:
                     timestamp = round(float(f.readline()))
                 except Exception:

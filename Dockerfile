@@ -19,10 +19,9 @@ WORKDIR /rootfs
 FROM base AS nginx
 ARG DEBIAN_FRONTEND
 
+COPY docker /docker
 # bind /var/cache/apt to tmpfs to speed up nginx build
-RUN --mount=type=tmpfs,target=/tmp --mount=type=tmpfs,target=/var/cache/apt \
-    --mount=type=bind,source=docker/build_nginx.sh,target=/deps/build_nginx.sh \
-    /deps/build_nginx.sh
+RUN /docker/build_nginx.sh
 
 FROM wget AS go2rtc
 ARG TARGETARCH
@@ -98,8 +97,8 @@ RUN wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/da
 
 FROM wget AS s6-overlay
 ARG TARGETARCH
-RUN --mount=type=bind,source=docker/install_s6_overlay.sh,target=/deps/install_s6_overlay.sh \
-    /deps/install_s6_overlay.sh
+COPY docker/install_s6_overlay.sh /
+RUN bash /install_s6_overlay.sh
 
 
 FROM base AS wheels
@@ -176,8 +175,8 @@ ENV NVIDIA_DRIVER_CAPABILITIES="compute,video,utility"
 ENV PATH="/usr/lib/btbn-ffmpeg/bin:/usr/local/go2rtc/bin:/usr/local/nginx/sbin:${PATH}"
 
 # Install dependencies
-RUN --mount=type=bind,source=docker/install_deps.sh,target=/deps/install_deps.sh \
-    /deps/install_deps.sh
+COPY docker/install_deps.sh /
+RUN bash /install_deps.sh
 
 RUN --mount=type=bind,from=wheels,source=/wheels,target=/deps/wheels \
     pip3 install -U /deps/wheels/*.whl
