@@ -87,7 +87,8 @@ class RecordingMaintainer(threading.Thread):
             )
 
         # delete all cached files past the most recent 5
-        keep_count = 5
+        max_pre =  max(self.config.cameras, key=lambda c: c.record.events.pre_capture)        
+        keep_count = (max_pre/10) + 1
         for camera in grouped_recordings.keys():
             segment_count = len(grouped_recordings[camera])
             if segment_count > keep_count:
