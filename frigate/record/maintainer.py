@@ -86,7 +86,7 @@ class RecordingMaintainer(threading.Thread):
                 }
             )
 
-        # delete all cached files past the most recent 5
+        # delete all cached files past the most recent 5 unless we need more to satisty the pre_capture time.
         min_keep_count = 5
         for camera in grouped_recordings.keys():
             camera_keep_count = (self.config.cameras[camera].record.events.pre_capture / 10) + 1
@@ -192,6 +192,20 @@ class RecordingMaintainer(threading.Thread):
                 if event.end_time is None or event.end_time >= start_time.timestamp():
                     overlaps = True
                     break
+                
+                #If Segment is in the pre_capture window of time.
+                #If started after event-pre_capture.
+                pre_capture = self.config.cameras[camera].record.events.pre_capture
+                if start_time >= event.start_time - datetime.timedelta(seconds=pre_capture):
+                    overlaps = True
+                    break
+
+                #If segment is within the post_caputre windoiw
+                #if segment.end_tim < event_end + post_caputre
+                post_capture = self.config.cameras[camera].record.events.post_capture
+                if start_time <= event.end_time + datetime.timedelta(seconds=post_capture):
+                    overlaps = True
+                    break
 
             if overlaps:
                 record_mode = self.config.cameras[camera].record.events.retain.mode
@@ -256,13 +270,13 @@ class RecordingMaintainer(threading.Thread):
     ) -> None:
         motion_count, active_count = self.segment_stats(camera, start_time, end_time)
 
-        # check if the segment shouldn't be stored
-        if (store_mode == RetainModeEnum.motion and motion_count == 0) or (
-            store_mode == RetainModeEnum.active_objects and active_count == 0
-        ):
-            Path(cache_path).unlink(missing_ok=True)
-            self.end_time_cache.pop(cache_path, None)
-            return
+        # # check if the segment shouldn't be stored
+        # if (store_mode == RetainModeEnum.motion and motion_count == 0) or (
+        #     store_mode == RetainModeEnum.active_objects and active_count == 0
+        # ):
+        #     Path(cache_path).unlink(missing_ok=True)
+        #     self.end_time_cache.pop(cache_path, None)
+        #     return
 
         directory = os.path.join(
             RECORD_DIR,
@@ -378,7 +392,7 @@ class RecordingMaintainer(threading.Thread):
                 asyncio.run(self.move_files())
             except Exception as e:
                 logger.error(
-                    "Error occurred when attempting to maintain recording cache"
+                    "Error occurred when attempting to maintain recording cache", e
                 )
                 logger.error(e)
             duration = datetime.datetime.now().timestamp() - run_start
